@@ -42,3 +42,21 @@
 
 Функция sort_by_date сортирует список транзакций по дате.
 
+### Шаги по установке:
+
+1. **Клонируйте репозиторий:**
+
+bash
+   git clone https://github.com/klaviwka/homework_10_1
+   cd ваш_репозиторий
+2. **Создайте виртуальное окружение (рекомендуется):**
+bash
+   python -m venv venv
+   source venv/bin/activate  # Для Linux/Mac
+   venv\Scripts\activate     # Для Windows
+3. **Установите необходимые зависимости:**
+
+   Убедитесь, что у вас установлен pip, затем выполните следующую команду:
+
+   bash
+   pip install datetime
