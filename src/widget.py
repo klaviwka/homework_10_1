@@ -1,14 +1,17 @@
 from datetime import datetime
-from masks import get_mask_card_number, get_mask_account
 
-def mask_account_card(info):
+from src.masks import get_mask_account, get_mask_card_number
+
+
+def mask_account_card(info: str) -> str:
     """Маскирует номер счета или карты в зависимости от входной строки."""
+    number = info.split()[-1]
+
     if 'Счет' in info:
-        # Маскируем номер счета
-        return get_mask_account(info)
+        return get_mask_account(number)  # Передаем номер счета в виде строки
     else:
-        # Маскируем номер карты
-        return get_mask_card_number(info)
+        return get_mask_card_number(number)  # Передаем номер карты в виде строки
+
 
 # Примеры использования
 if __name__ == "__main__":
@@ -16,12 +19,13 @@ if __name__ == "__main__":
     print(mask_account_card("Счет 73654108430135874305"))      # Пример для счета
 
 
-def get_date(date_str):
+def get_date(date_str: str) -> str:
     """Преобразует строку с датой из формата 'YYYY-MM-DDTHH:MM:SS.ssssss' в формат 'DD.MM.YYYY'."""
     # Парсим входную строку в объект datetime
     date_object = datetime.fromisoformat(date_str)
     # Форматируем дату в нужный формат
     return date_object.strftime("%d.%m.%Y")
+
 
 # Пример использования
 if __name__ == "__main__":
