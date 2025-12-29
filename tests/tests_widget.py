@@ -2,8 +2,10 @@ import pytest
 from src.widget import mask_account_card, get_date
 from typing import Any
 
+
 @pytest.fixture
 def mock_get_mask_card_number(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Замена функции получения замаскированного номера карты для тестов."""
     def mock_function(info: Any) -> str:
         return "**** ** ** 6361"  # Замаскированный номер карты
 
@@ -12,6 +14,7 @@ def mock_get_mask_card_number(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def mock_get_mask_account(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Замена функции получения замаскированного номера счета для тестов."""
     def mock_function(info: Any) -> str:
         return "**** ** ** 74305"  # Замаскированный номер счета
 
@@ -23,7 +26,13 @@ def mock_get_mask_account(monkeypatch: pytest.MonkeyPatch) -> None:
     ("Счет 73654108430135874305", "**** ** ** 74305"),  # Тест на номер счета
     ("Некорректные данные", "Некорректные данные"),  # Тест на некорректные данные
 ])
-def test_mask_account_card(mock_get_mask_card_number: None, mock_get_mask_account: None, input_info: str, expected_output: str) -> None:
+def test_mask_account_card(
+    mock_get_mask_card_number: None,
+    mock_get_mask_account: None,
+    input_info: str,
+    expected_output: str
+) -> None:
+    """Тестирует функцию mask_account_card на различных входных данных."""
     result = mask_account_card(input_info)
 
     if input_info == "Некорректные данные":
@@ -39,6 +48,7 @@ def test_mask_account_card(mock_get_mask_card_number: None, mock_get_mask_accoun
     ("2000-01-01T00:00:00.000000", "01.01.2000"),  # Граничная дата
 ])
 def test_get_date(input_date: str, expected_output: str) -> None:
+    """Тестирует функцию get_date на корректных входных данных."""
     result = get_date(input_date)
     assert result == expected_output
 
@@ -49,5 +59,11 @@ def test_get_date(input_date: str, expected_output: str) -> None:
     "2024-13-01T00:00:00.000000",  # Некорректный месяц
 ])
 def test_get_date_invalid(input_date: str) -> None:
+    """Тестирует функцию get_date на некорректных входных данных."""
     with pytest.raises(ValueError):
         get_date(input_date)
+
+
+# Запуск тестов
+if __name__ == "__main__":
+    pytest.main()
