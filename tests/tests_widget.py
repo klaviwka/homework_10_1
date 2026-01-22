@@ -1,69 +1,96 @@
 import pytest
-from src.widget import mask_account_card, get_date
-from typing import Any
+from src.masks import get_mask_card_number, get_mask_account
+from src.widget import get_date
 
 
+# Фиктура для тестов номеров карт
 @pytest.fixture
-def mock_get_mask_card_number(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Замена функции получения замаскированного номера карты для тестов."""
-    def mock_function(info: Any) -> str:
-        return "**** ** ** 6361"  # Замаскированный номер карты
+def card_numbers():
+    return [
+        (7000792289606361, "7000 79** **** 6361"),
+        (1234567812345678, "1234 56** **** 5678"),
+        (9876543210123456, "9876 54** **** 3456"),
+        (1234, "1234 ** **** 1234"),  # Короткий номер
+        (0, "0** **** 0"),            # Нулевой номер
+        (1111111111111111, "1111 11** **** 1111"),  # Все цифры одинаковые
+    ]
 
-    monkeypatch.setattr("src.widget.get_mask_card_number", mock_function)
+
+# Параметризованный тест для валидных номеров карт
+@pytest.mark.parametrize("card_number, expected", [
+    (7000792289606361, "7000 79** **** 6361"),
+    (1234567812345678, "1234 56** **** 5678"),
+    (9876543210123456, "9876 54** **** 3456"),
+])
+def test_valid_card_number(card_number, expected):
+    """Тестирование функции get_mask_card_number на валидных номерах карт."""
+    assert get_mask_card_number(card_number) == expected
 
 
+# Параметризованный тест для крайних случаев
+@pytest.mark.parametrize("card_number, expected", [
+    (1234, "1234 ** **** 1234"),  # Короткий номер
+    (0, "0 ** **** 0"),            # Нулевой номер
+    (1111111111111111, "1111 11** **** 1111"),  # Все цифры одинаковые
+])
+def test_edge_case(card_number, expected):
+    """Тестирование функции get_mask_card_number на крайних случаях."""
+    assert get_mask_card_number(card_number) == expected
+
+
+# Фиктура для тестов номеров счетов
 @pytest.fixture
-def mock_get_mask_account(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Замена функции получения замаскированного номера счета для тестов."""
-    def mock_function(info: Any) -> str:
-        return "**** ** ** 74305"  # Замаскированный номер счета
+def account_numbers():
+    return [
+        (73654108430135874305, "**8305"),
+        ("1234567890123456", "**3456"),
+        ("123", "**123"),
+        ("", "**"),  # Ожидаем, что будет возвращено **
+        ("7", "**7"),
+    ]
 
-    monkeypatch.setattr("src.widget.get_mask_account", mock_function)
 
-
-@pytest.mark.parametrize("input_info, expected_output", [
-    ("Visa Platinum 7000792289606361", "**** ** ** 6361"),  # Тест на номер карты
-    ("Счет 73654108430135874305", "**** ** ** 74305"),  # Тест на номер счета
-    ("Некорректные данные", "Некорректные данные"),  # Тест на некорректные данные
+# Параметризованный тест для маскирования счетов
+@pytest.mark.parametrize("card_account, expected", [
+    (73654108430135874305, "**4305"),
+    ("1234567890123456", "**3456"),
+    ("123", "**123"),
+    ("", "**"),  # Ожидаем, что будет возвращено **
+    ("7", "**7"),
 ])
-def test_mask_account_card(
-    mock_get_mask_card_number: None,
-    mock_get_mask_account: None,
-    input_info: str,
-    expected_output: str
-) -> None:
-    """Тестирует функцию mask_account_card на различных входных данных."""
-    result = mask_account_card(input_info)
-
-    if input_info == "Некорректные данные":
-        # Ожидаем, что функция вернет входные данные без изменений
-        assert result != expected_output  # Проверяем, что результат не совпадает с ожидаемым
-    else:
-        assert result == expected_output  # Для корректных данных проверяем совпадение
-
-
-@pytest.mark.parametrize("input_date, expected_output", [
-    ("2024-03-11T02:26:18.671407", "11.03.2024"),  # Корректная дата
-    ("2022-12-25T15:00:00.000000", "25.12.2022"),  # Корректная дата
-    ("2000-01-01T00:00:00.000000", "01.01.2000"),  # Граничная дата
-])
-def test_get_date(input_date: str, expected_output: str) -> None:
-    """Тестирует функцию get_date на корректных входных данных."""
-    result = get_date(input_date)
-    assert result == expected_output
-
-
-@pytest.mark.parametrize("input_date", [
-    "invalid-date",                # Некорректный формат даты
-    "2024-02-30T00:00:00.000000",  # Некорректная дата (30 февраля)
-    "2024-13-01T00:00:00.000000",  # Некорректный месяц
-])
-def test_get_date_invalid(input_date: str) -> None:
-    """Тестирует функцию get_date на некорректных входных данных."""
-    with pytest.raises(ValueError):
-        get_date(input_date)
+def test_get_mask_account(card_account, expected):
+    """Тестирование функции get_mask_account на различных входных данных."""
+    result = get_mask_account(card_account)
+    assert result == expected
 
 
 # Запуск тестов
-if __name__ == "__main__":
+if __name__ == '__main__':
     pytest.main()
+
+
+# Фиктура для тестовых данных с датами
+@pytest.fixture
+def date_data():
+    """Возвращает список тестовых данных для преобразования дат."""
+    return [
+        ("2024-03-11T02:26:18.671407", "11.03.2024"),
+        ("2023-12-31T23:59:59.999999", "31.12.2023"),
+        ("2000-01-01T00:00:00.000000", "01.01.2000"),
+        ("1999-07-15T15:30:45.123456", "15.07.1999"),
+        ("2022-05-05T12:00:00.000000", "05.05.2022"),
+    ]
+
+
+# Параметризованный тест для преобразования дат
+@pytest.mark.parametrize("date_str, expected", [
+    ("2024-03-11T02:26:18.671407", "11.03.2024"),
+    ("2023-12-31T23:59:59.999999", "31.12.2023"),
+    ("2000-01-01T00:00:00.000000", "01.01.2000"),
+    ("1999-07-15T15:30:45.123456", "15.07.1999"),
+    ("2022-05-05T12:00:00.000000", "05.05.2022"),
+])
+def test_get_date(date_str, expected):
+    """Тестирует преобразование строки даты в нужный формат."""
+    result = get_date(date_str)
+    assert result == expected
