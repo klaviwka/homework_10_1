@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Dict, Any
 
-def filter_by_state(transactions: List[Dict[str, Any]], state: str = 'EXECUTED') -> List[Dict[str, Any]]:
+
+def filter_by_state(transactions, state='EXECUTED'):
     """
     Фильтрует список словарей по значению ключа 'state'.
 
@@ -15,7 +15,7 @@ def filter_by_state(transactions: List[Dict[str, Any]], state: str = 'EXECUTED')
     return filtered_transactions
 
 
-def sort_by_date(transactions: List[Dict[str, Any]], descending: bool = True) -> List[Dict[str, Any]]:
+def sort_by_date(transactions, descending=True):
     """
     Сортирует список словарей по значению ключа 'date'.
 
