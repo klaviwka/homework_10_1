@@ -14,6 +14,7 @@ def get_mask_card_number(card_number: int) -> str:
     masked_number = f"{card_number_str[:4]} {card_number_str[4:6]}** **** {card_number_str[-4:]}"
     return masked_number
 
+
 # Пример использования
 card_number = 7000792289606361
 masked_card = get_mask_card_number(card_number)
