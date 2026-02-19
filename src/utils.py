@@ -15,13 +15,20 @@ def load_operations(file_path):
         return []
 
     try:
-        with open(file_path, encoding='utf-8') as file:
-            data = file.read()  # Чтение файла целиком
-            operations = json.loads(data)  # Парсинг JSON
+        # Открываем файл в режиме 'r' (только чтение)
+        with open(file_path, mode="r", encoding="utf-8") as file:
+            # Используем json.load() для прямого чтения JSON из файла
+            operations = json.load(file)
             if isinstance(operations, list):
                 return operations
             else:
                 return []
+    except FileNotFoundError:
+        print(f"Файл {file_path} не найден.")
+        return []
+    except json.JSONDecodeError as e:
+        print(f"Ошибка при разборе JSON в файле {file_path}: {e}.")
+        return []
     except Exception as e:
-        print(f"Произошла ошибка при обработке файла {file_path}: {e}")
+        print(f"Произошла ошибка при обработке файла {file_path}: {e}.")
         return []
