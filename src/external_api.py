@@ -16,31 +16,47 @@ def convert_transaction_to_rubles(transaction):
     :param transaction: Словарь с данными транзакции.
     :return: Сумма транзакции в рублях (тип float).
     """
-    amount_str = transaction["operationAmount"]["amount"]
-    currency = transaction["operationAmount"]["currency"]["code"]
+    amount_str = transaction["operationAmount"]["amount"]  # Получаем сумму транзакции
+    currency = transaction["operationAmount"]["currency"]["code"]  # Получаем валюту транзакции
 
-    # Преобразуем строку с суммой в число с плавающей запятой
+    # Преобразуем строку с суммой в число с плавающей точкой
     amount = float(amount_str)
 
     if currency == "RUB":
-        return amount
-    elif currency in ["USD", "EUR"]:
-        api_key = os.getenv("API_KEY")  # Здесь используем вашу переменную API_KEY
-        if not api_key:
-            raise ValueError("Необходимо задать API_KEY в переменных окружения!")
+        return amount  # Если валюта уже рубли, возвращаем сумму без конвертации
 
+    elif currency in ["USD", "EUR"]:
+        api_key = os.getenv("API_KEY")  # Берём API KEY из переменных окружения
+        if not api_key:
+            raise ValueError("Необходимо задать API_KEY в переменных окружения.")
+
+        headers = {
+            "apikey": api_key  # Устанавливаем заголовок с API ключом
+        }
+
+        # Формируем тело запроса для API exchangerates_data
+        params = {
+            "to": "RUB",      # Валюта, в которую конвертируем
+            "from": currency,  # Исходная валюта
+            "amount": amount   # Сумму, которую конвертируем
+        }
+
+        # Отправляем GET-запрос к API
         response = requests.get(
-            f"http://api.exchangeratesapi.io/v1/latest?access_key={api_key}&base={currency}"
+            "https://api.apilayer.com/exchangerates_data/convert",
+            headers=headers,
+            params=params
         )
 
         if response.status_code != 200:
             raise RuntimeError(f"Ошибка запроса к API: статус-код {response.status_code}, сообщение: {response.text}")
 
-        rates = response.json().get("rates", {})
-        ruble_rate = rates.get("RUB")
-        if ruble_rate is None:
-            raise ValueError(f"Нет данных о курсе {currency} к RUB")
+        # Получаем ответ и извлекаем значение по ключу "result"
+        converted_amount = response.json().get("result")
+        if converted_amount is None:
+            raise ValueError("Не удалось получить значение по ключу 'result'")
 
-        return round(float(amount * ruble_rate), 2)
+        return round(converted_amount, 2)  # Округляем результат до двух знаков после запятой
+
     else:
         raise ValueError(f"Валюта '{currency}' не поддерживается.")
