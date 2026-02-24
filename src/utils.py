@@ -2,6 +2,17 @@
 
 import json
 import os
+import logging
+
+# Настраиваем логирование
+logging.basicConfig(
+    filename='./logs/utils.log',   # Имя файла логов
+    filemode='w',                  # Режим перезаписи
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO            # Уровнем серьёзности INFO будем фиксировать события
+)
+
+logger = logging.getLogger(__name__)  # Получаем объект logger для текущего модуля
 
 
 def load_operations(file_path):
@@ -12,6 +23,7 @@ def load_operations(file_path):
     :return: Список словарей с операциями или пустой список, если файл некорректен.
     """
     if not os.path.isfile(file_path):
+        logger.warning(f"Файл {file_path} не существует.")  # Логируем предупреждение
         return []
 
     try:
@@ -20,15 +32,17 @@ def load_operations(file_path):
             # Используем json.load() для прямого чтения JSON из файла
             operations = json.load(file)
             if isinstance(operations, list):
+                logger.info("Операции успешно загружены из файла %s.", file_path)  # Логируем успех загрузки
                 return operations
             else:
+                logger.error("Неправильный формат данных в файле %s.", file_path)  # Логируем неправильный формат данных
                 return []
     except FileNotFoundError:
-        print(f"Файл {file_path} не найден.")
+        logger.error(f"Файл {file_path} не найден.")  # Логируем отсутствие файла
         return []
     except json.JSONDecodeError as e:
-        print(f"Ошибка при разборе JSON в файле {file_path}: {e}.")
+        logger.error(f"Ошибка при разборе JSON в файле {file_path}: {e}.")  # Логируем ошибку парсинга JSON
         return []
     except Exception as e:
-        print(f"Произошла ошибка при обработке файла {file_path}: {e}.")
+        logger.error(f"Произошла ошибка при обработке файла {file_path}: {e}.")  # Логируем общую ошибку
         return []
