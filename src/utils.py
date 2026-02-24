@@ -35,7 +35,7 @@ def load_operations(file_path):
                 logger.info("Операции успешно загружены из файла %s.", file_path)  # Логируем успех загрузки
                 return operations
             else:
-                logger.error("Неправильный формат данных в файле %s.", file_path)  # Логируем неправильный формат данных
+                logger.error("Неправильный формат данных в файле %s.", file_path)  # Логируем неправильный формат даных
                 return []
     except FileNotFoundError:
         logger.error(f"Файл {file_path} не найден.")  # Логируем отсутствие файла
