@@ -1,8 +1,8 @@
 # src/utils.py
 
 import json
-import os
 import logging
+import os
 
 # Настраиваем логирование
 logging.basicConfig(
