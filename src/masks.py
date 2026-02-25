@@ -1,3 +1,14 @@
+import logging
+
+# Настройка логирования
+logging.basicConfig(
+    filename='./logs/masks.log',  # Исправлено название файла логов
+    filemode='w',  # Перезапись файла при каждом запуске
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+
 def get_mask_card_number(card_number: int) -> str:
     """
     Маскирует номер кредитной карты, оставляя видимыми только первые 6 и последние 4 цифры.
@@ -8,11 +19,22 @@ def get_mask_card_number(card_number: int) -> str:
     Returns:
         str: Маскированный номер карты в формате 'XXXX XX** **** XXXX'.
     """
-    # Преобразуем целое число в строку
-    card_number_str = str(card_number)
-    # Маскируем номер карты
-    masked_number = f"{card_number_str[:4]} {card_number_str[4:6]}** **** {card_number_str[-4:]}"
-    return masked_number
+    try:
+        # Преобразуем целое число в строку
+        card_number_str = str(card_number)
+
+        # Маскируем номер карты
+        masked_number = f"{card_number_str[:4]} {card_number_str[4:6]}** **** {card_number_str[-4:]}"
+
+        # Логируем успешное маскирование номера карты
+        logging.info(f'Карточка успешно замаскирована: {masked_number}')
+
+        return masked_number
+    except Exception as e:
+        # Логируем ошибку при обработке номера карты
+        logging.error(f'Ошибка при маскировании карточки: {e}')
+        raise
+
 
 # Пример использования
 card_number = 7000792289606361
@@ -30,14 +52,22 @@ def get_mask_account(card_account: str) -> str:
     Returns:
         str: Маскированный номер счета в формате '**XXXX', где XXXX - последние 4 цифры.
     """
-    # Преобразуем целое число в строку, если это необходимо
-    if isinstance(card_account, int):
-        card_account = str(card_account)
+    try:
+        # Преобразуем целое число в строку, если это необходимо
+        if isinstance(card_account, int):
+            card_account = str(card_account)
 
-    # Маскируем номер счета
-    masked_account = f"**{card_account[-4:]}"
+        # Маскируем номер счета
+        masked_account = f"**{card_account[-4:]}"
 
-    return masked_account
+        # Логируем успешное маскирование номера счета
+        logging.info(f'Номер счёта успешно замаскирован: {masked_account}')
+
+        return masked_account
+    except Exception as e:
+        # Логируем ошибку при обработке номера счета
+        logging.error(f'Ошибка при маскировании номера счёта: {e}')
+        raise
 
 
 # Пример использования
