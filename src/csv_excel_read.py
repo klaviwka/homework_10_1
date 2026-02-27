@@ -3,7 +3,7 @@ import pandas as pd
 
 def read_csv_transactions(file_path):
     """
-    Функция для считывания финансовых операций из CSV-файла.
+    Функция для считывания финансовых операций из CSV-файла с точкой с запятой ';' в качестве разделителя.
 
     Параметры:
         file_path (str): Полный путь к файлу CSV.
@@ -12,7 +12,7 @@ def read_csv_transactions(file_path):
         list of dicts: Список словарей, каждый словарь представляет одну строку с транзакцией.
     """
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, delimiter=';', encoding='utf-8')
         return df.to_dict('records')
     except Exception as e:
         raise ValueError(f"Ошибка при чтении CSV-файла {file_path}: {e}")
