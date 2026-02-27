@@ -1,10 +1,13 @@
 # test_csv_excel_read.py
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
-from src.csv_excel_read import read_csv_transactions, read_excel_transactions
 import pytest  # добавляем подключение pytest
+
+from src.csv_excel_read import read_csv_transactions, read_excel_transactions
+
 
 def create_mock_df():
     """Создание фиктивного DataFrame"""
@@ -19,6 +22,7 @@ def create_mock_df():
         'to': ['Account C', 'Account D'],
         'description': ['Transaction 1', 'Transaction 2']
     })
+
 
 def test_read_csv_transactions_success():
     """Позитивный тест: проверка корректности возврата данных из CSV."""
@@ -35,6 +39,7 @@ def test_read_csv_transactions_success():
         ]
         assert result == expected_result
 
+
 def test_read_excel_transactions_success():
     """Позитивный тест: проверка корректности возврата данных из Excel."""
     with patch('pandas.read_excel', new_callable=MagicMock) as mock_read_excel:
@@ -50,17 +55,20 @@ def test_read_excel_transactions_success():
         ]
         assert result == expected_result
 
+
 def test_read_csv_transactions_failure():
     """Негативный тест: проверка реакции на отсутствующий файл CSV."""
     with unittest.mock.patch('pandas.read_csv', side_effect=FileNotFoundError()):
         with pytest.raises(ValueError):
             read_csv_transactions('/nonexistent/path/to/file.csv')
 
+
 def test_read_excel_transactions_failure():
     """Негативный тест: проверка реакции на отсутствующий файл Excel."""
     with unittest.mock.patch('pandas.read_excel', side_effect=FileNotFoundError()):
         with pytest.raises(ValueError):
             read_excel_transactions('/nonexistent/path/to/file.xlsx')
+
 
 if __name__ == '__main__':
     unittest.main()
