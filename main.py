@@ -1,13 +1,12 @@
-import csv
-import json
+import os
 import sys
-from collections import Counter
-from datetime import datetime
-from typing import Dict, List
-
+import json
+import csv
 import openpyxl
-
-from src.processing import filter_by_state, process_bank_search, sort_by_date
+from datetime import datetime
+from typing import List, Dict
+from src.processing import filter_by_state, sort_by_date, process_bank_search, process_bank_operations
+import re
 
 
 def load_json_file(file_path: str) -> List[Dict]:
@@ -16,11 +15,11 @@ def load_json_file(file_path: str) -> List[Dict]:
         return json.load(f)
 
 
-def load_csv_file(file_path: str) -> List[Dict]:
-    """Загружает файл CSV."""
+def load_csv_file(file_path: str, delimiter=",") -> List[Dict]:
+    """Загружает файл CSV с указанным разделителем."""
     records = []
-    with open(file_path, newline='', encoding="utf-8") as file:
-        reader = csv.DictReader(file)
+    with open(file_path, newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file, delimiter=delimiter)
         for row in reader:
             records.append(row)
     return records
@@ -60,20 +59,12 @@ def display_transaction(transaction: Dict):
     description = transaction['description']
 
     # Получаем поля FROM и TO
+    from_info = transaction.get('from', '')
     to_info = transaction.get('to', '')
 
     # Функция для правильной маски номера карты/счета
-    def mask_number(number):
-        if len(number) >= 16 and number.isdigit():  # карточный номер (полностью цифровой и минимум 16 символов)
-            first_four = number[:4]
-            last_four = number[-4:]
-            hidden_middle = "****** ****"
-            return f"{first_four} {hidden_middle} {last_four}"
-        elif len(number) >= 4 and number.isdigit():  # номер счёта (меньше 16 символов)
-            return f"**{number[-4:]}"  # оставляем последние 4 цифры
-        return number
-    # Применяем маску к полю TO
-    to_masked = mask_number(to_info)
+    masked_from = mask_card_or_account_number(from_info)
+    masked_to = mask_card_or_account_number(to_info)
 
     # Получаем сумму и валюту
     amount = float(transaction["operationAmount"]["amount"])
@@ -82,19 +73,38 @@ def display_transaction(transaction: Dict):
 
     # Выводим результат
     print(f"{date_str} {description}")
-    print(f"-> {to_masked}")  # Убираем лишнюю стрелочку
+    if masked_from:  # Если есть отправитель, показываем его
+        print(f"<-- {masked_from}")  # Стрелочка показывает направление отправки
+    print(f"-> {masked_to}")
     print(f"Сумма: {amount:.2f} {currency}\n")
 
 
-def process_bank_operations(data: list[dict], categories: list) -> dict:
-    """Группирует банковские операции по категориям."""
-    counter = Counter()
-    for record in data:
-        if 'description' in record:
-            for cat in categories:
-                if cat.lower() in record['description'].lower():
-                    counter[cat] += 1
-    return dict(counter)
+def mask_card_or_account_number(number: str) -> str:
+    """Корректная маска для кредитных карт и банковских счетов."""
+    parts = re.findall(r'\w+', number)  # Извлекаем группы численно-буквенных элементов
+    masked_parts = []
+
+    for part in parts:
+        if part.isdigit():  # Если группа состоит только из цифр
+            if len(part) >= 16:  # Маска для банковской карты
+                first_four = part[:4]
+                last_four = part[-4:]
+                masked_part = f"{first_four} {'*' * 6} {'*' * 4} {last_four}"
+            elif len(part) > 4:  # Маска для банковского счёта (более 4-х цифр)
+                masked_part = f"{'*' * (len(part) - 4)}{part[-4:]}"
+            else:  # Короткий счёт (менее 5 цифр)
+                masked_part = f"**{part[-2:]}"
+        else:  # Группа содержит буквы или спецсимволы
+            masked_part = part  # Не маскируем
+
+        masked_parts.append(masked_part)
+
+    return ' '.join(masked_parts)
+
+
+def apply_keyword_filter(transactions: List[Dict], keyword: str) -> List[Dict]:
+    """Фильтрует транзакции по наличию указанного слова в описании."""
+    return [tr for tr in transactions if keyword.lower() in tr['description'].lower()]
 
 
 def main():
@@ -116,11 +126,12 @@ def main():
         else:
             print("Неверный выбор пункта меню!")
 
-    # Путь к файлам
+    # Определяем путь относительно исполняемого файла
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     file_paths = {
-        ".json": r"C:\pythonlesson\homework_10_1\data\operations.json",
-        ".csv": r"C:\pythonlesson\homework_10_1\transactions.csv",
-        ".xlsx": r"C:\pythonlesson\homework_10_1\transactions_excel.xlsx"
+        ".json": os.path.join(base_dir, "data", "operations.json"),
+        ".csv": os.path.join(base_dir, "data", "transactions.csv"),
+        ".xlsx": os.path.join(base_dir, "data", "transactions_excel.xlsx")
     }
 
     full_path = file_paths.get(ext)
@@ -143,6 +154,7 @@ def main():
         sys.exit(1)
 
     # Выбор статуса
+    valid_statuses = ["EXECUTED", "CANCELED", "PENDING"]
     status = None
 
     while status is None or not validate_status(status):
@@ -172,8 +184,8 @@ def main():
         sort_order = ascending == "ПО ВОЗРАСТАНИЮ"
         filtered_data = sort_by_date(filtered_data, descending=(not sort_order))
 
-    # Далее проверяем, нужны ли только рублёвые транзакции
-    ruble_filter = prompt_user_choice("Выводить только рублёвые транзакции? (Да/Нет): ", ["ДА", "НЕТ"])
+    # Далее проверяем, нужны ли только рублевые транзакции
+    ruble_filter = prompt_user_choice("Выводить только рублевые транзакции? (Да/Нет): ", ["ДА", "НЕТ"])
     if ruble_filter == "ДА":
         filtered_data = [
             item for item in filtered_data
@@ -182,12 +194,12 @@ def main():
 
     # Поиск по ключевому слову в описании
     search_word = prompt_user_choice(
-        "Отфильтровать список транзакций по определённому слову в описании? (Да/Нет): ",
+        "Отфильтровать список транзакций по определенному слову в описании? (Да/Нет): ",
         ["ДА", "НЕТ"]
     )
     if search_word == "ДА":
-        word_to_search = input("Введите слово для поиска: ")
-        filtered_data = process_bank_search(filtered_data, word_to_search)
+        keyword = input("Введите слово для поиска: ")
+        filtered_data = apply_keyword_filter(filtered_data, keyword)
 
     # Вывод всех транзакций
     if len(filtered_data) == 0:
