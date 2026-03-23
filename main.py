@@ -1,21 +1,28 @@
 import os
 import sys
-from datetime import datetime
-from typing import List, Dict
-from src.processing import filter_by_state, sort_by_date, process_bank_search
-from src.utils import load_operations
-from src.csv_excel_read import read_csv_transactions, read_excel_transactions
-from src.masks import get_mask_card_number, get_mask_account
+from typing import Dict, List
 
-# Меню пунктов выбора файла
+# Импортируем функции для чтения CSV и Excel (они должны принимать file_path)
+from src.csv_excel_read import read_csv_transactions, read_excel_transactions
+# Импортируем функции маскировки
+from src.masks import get_mask_account, get_mask_card_number
+# Импортируем функции обработки данных
+from src.processing import filter_by_state, process_bank_search, sort_by_date
+from src.utils import load_operations
+# Импортируем функцию форматирования даты
+from src.widget import get_date
+
+# --- МЕНЮ (ПРОВЕРЬТЕ, ЧТОБЫ НЕ БЫЛО ПЕРЕНОСОВ СТРОК ВНУТРИ СКОБОК!) ---
 MENU_ITEMS = {
     "1": ("Получить информацию о транзакциях из JSON-файла", ".json"),
     "2": ("Получить информацию о транзакциях из CSV-файла", ".csv"),
     "3": ("Получить информацию о транзакциях из XLSX-файла", ".xlsx")
 }
+# ----------------------------------------------------------------
 
 # Допустимые статусы операций
 VALID_STATUSES = ["EXECUTED", "CANCELED", "PENDING"]
+
 
 def prompt_user_choice(prompt: str, choices: List[str]):
     """
@@ -29,11 +36,13 @@ def prompt_user_choice(prompt: str, choices: List[str]):
             break
     return choice
 
+
 def display_transaction(transaction: Dict):
     """
     Показывает отдельную транзакцию в удобочитаемом виде.
     """
-    date_str = datetime.strptime(transaction["date"], "%Y-%m-%dT%H:%M:%S.%f").strftime("%d.%m.%Y")
+    # Используем функцию get_date для форматирования даты
+    date_str = get_date(transaction["date"])
     description = transaction['description']
 
     # Маскируем номер карты или счета
@@ -51,10 +60,22 @@ def display_transaction(transaction: Dict):
     else:
         masked_to = get_mask_account(field_to)
 
-    # Получаем сумму и валюту
-    amount = float(transaction["operationAmount"]["amount"])
-    currency_code = transaction["operationAmount"]["currency"]["code"]
-    currency = "руб." if currency_code == "RUB" else currency_code
+    # Получаем сумму и валюту (с учетом разной структуры данных)
+    try:
+        # Структура JSON: operationAmount -> amount
+        amount = float(transaction["operationAmount"]["amount"])
+    except (KeyError, TypeError):
+        # Структура CSV/Excel: поле amount на верхнем уровне
+        amount = float(transaction.get("amount", 0))
+
+    try:
+        # Структура JSON: operationAmount -> currency -> code
+        currency_code = transaction["operationAmount"]["currency"]["code"]
+        currency = "руб." if currency_code == "RUB" else currency_code
+    except (KeyError, TypeError):
+        # Структура CSV/Excel: поле currency на верхнем уровне
+        currency_code = transaction.get("currency", "")
+        currency = "руб." if currency_code == "RUB" else currency_code
 
     # Выводим результат
     print(f"{date_str} {description}")
@@ -63,6 +84,7 @@ def display_transaction(transaction: Dict):
     if masked_to:
         print(f"Получатель: {masked_to}")
     print(f"Сумма: {amount:.2f} {currency}\n")
+
 
 def main():
     print("Привет! Добро пожаловать в программу работы с банковскими транзакциями.\n")
@@ -79,10 +101,11 @@ def main():
         else:
             print("Неверный выбор пункта меню!")
 
-    # Формирование относительного пути к файлу
+    # Формируем имя файла и полный путь к нему в папке data/
+    file_name = "operations.json" if ext == ".json" else f"transactions{ext}"
     base_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(base_dir, 'data')
-    full_path = os.path.join(data_dir, f'transactions.{ext}') if ext != '.json' else os.path.join(data_dir, 'operations.json')
+    full_path = os.path.join(data_dir, file_name)
 
     # Чтение данных из выбранного файла
     try:
@@ -95,7 +118,13 @@ def main():
         else:
             raise ValueError("Неправильный тип файла")
 
-        print(f"\nДля обработки выбран {MENU_ITEMS[user_input][0]}\n")
+        # Корректный вывод сообщения о выбранном файле
+        if ext == ".json":
+            print(f"\nДля обработки выбран {MENU_ITEMS[user_input][0]}\n")
+        else:
+            # Для CSV и XLSX выводим понятное название типа файла
+            print(f"\nДля обработки выбран {ext[1:].upper()}-файл.\n")
+
     except FileNotFoundError:
         print(f"Файл {full_path} не найден.")
         sys.exit(1)
@@ -104,18 +133,19 @@ def main():
     status = None
     while status is None or status.upper() not in VALID_STATUSES:
         status = input(
-            "Введите статус, по которому необходимо выполнить фильтрацию\n(доступные статусы: EXECUTED, CANCELED, PENDING): ").strip().upper()
+            "Введите статус, по которому необходимо "
+            "выполнить фильтрацию\n(доступные статусы: EXECUTED, CANCELED, PENDING): ").strip().upper()
         if status.upper() not in VALID_STATUSES:
             print(f"Статус операции \"{status}\" недоступен.")
 
     # Фильтруем операции по введенному статусу
     filtered_data = filter_by_state(data, status)
-    print(f"\nОперации отфильтрованы по статусу \"{status}\"\n")
 
-    # Если операция завершилась нулевым результатом
     if len(filtered_data) == 0:
         print(f"\nПо указанному статусу \"{status}\" не найдены соответствующие операции.")
         sys.exit(0)
+
+    print(f"\nОперации отфильтрованы по статусу \"{status}\"\n")
 
     # Предлагаем отсортировать операции по дате
     sorting_needed = prompt_user_choice("Отсортировать операции по дате? (Да/Нет): ", ["ДА", "НЕТ"])
@@ -125,25 +155,22 @@ def main():
         sort_order = ascending == "ПО ВОЗРАСТАНИЮ"
         filtered_data = sort_by_date(filtered_data, descending=(not sort_order))
 
-    # Дополнительно выводим только рублевые транзакции
-    ruble_filter = prompt_user_choice("Выводить только рублевые транзакции? (Да/Нет): ", ["ДА", "НЕТ"])
-    if ruble_filter == "ДА":
-        filtered_data = [item for item in filtered_data if item["operationAmount"]["currency"]["code"] == "RUB"]
-
     # Дополнительный фильтр по слову в описании
     search_word = prompt_user_choice("Отфильтровать список транзакций по определенному слову в описании? (Да/Нет): ",
                                      ["ДА", "НЕТ"])
+
     if search_word == "ДА":
         word_to_search = input("Введите слово для поиска: ")
         filtered_data = process_bank_search(filtered_data, word_to_search)
 
-    # Вывод результатов
+    # Вывод результатов или сообщение об отсутствии данных после всех фильтров
     if len(filtered_data) == 0:
         print("\nНе найдено ни одной транзакции, соответствующей вашим условиям фильтрации.")
     else:
         print(f"\nВсего банковских операций в выборке: {len(filtered_data)}\n")
         for idx, tr in enumerate(filtered_data):
             display_transaction(tr)
+
 
 if __name__ == "__main__":
     main()
