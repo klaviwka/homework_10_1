@@ -1,14 +1,28 @@
 from datetime import datetime
-from masks import get_mask_card_number, get_mask_account
+
+from src.masks import get_mask_account, get_mask_card_number
+
 
 def mask_account_card(info):
     """Маскирует номер счета или карты в зависимости от входной строки."""
-    if 'Счет' in info:
-        # Маскируем номер счета
-        return get_mask_account(info)
+    # Очищаем строку от пробельных символов
+    clean_info = info.strip()
+
+    # Если строка пустая после очистки, сразу возвращаем пустую строку
+    if not clean_info:
+        return ""
+
+    # Проверяем, содержит ли строка хотя бы одну цифру
+    if not any(char.isdigit() for char in clean_info):
+        return clean_info  # Если цифр нет, возвращаем исходную строку без изменений
+
+    # Если в строке содержится слово "Счет", применяем маску для счета
+    if 'Счет' in clean_info:
+        return get_mask_account(clean_info)
     else:
-        # Маскируем номер карты
-        return get_mask_card_number(info)
+        # Иначе считаем, что это карта, и применяем маску для карты
+        return get_mask_card_number(clean_info)
+
 
 # Примеры использования
 if __name__ == "__main__":
@@ -22,6 +36,7 @@ def get_date(date_str):
     date_object = datetime.fromisoformat(date_str)
     # Форматируем дату в нужный формат
     return date_object.strftime("%d.%m.%Y")
+
 
 # Пример использования
 if __name__ == "__main__":
